@@ -212,6 +212,18 @@
     <!-- VIEW -->
     <div id="viewScreen" class="card hidden">
         <h3 id="viewTitle">محفوظ شدہ ریکارڈ</h3>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+            
+            <button onclick="exportToCSV()" style="flex: 1; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <i class="fa-solid fa-file-export"></i> Export CSV
+            </button>
+    
+            <label for="csvFileInput" style="flex: 1; padding: 10px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <i class="fa-solid fa-file-import"></i> Import CSV
+            </label>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="importFromCSV(event)">
+            
+        </div>
         <table dir="ltr">
             <thead>
                 <tr>
@@ -343,11 +355,82 @@ function deleteRecord(adm){
     loadRecords();
 }
 
+function exportToCSV() {
+    const data = JSON.parse(localStorage.getItem('admissions')) || [];
+    if (data.length === 0) {
+        alert("No data found to export!");
+        return;
+    }
+
+    // 1. Define Headers
+    const headers = ["adm", "name", "father", "class", "section", "roll", "dob", "added_on", "updated_on"];
+    
+    // 2. Build CSV Content
+    const csvRows = [];
+    csvRows.push(headers.join(',')); // Add header row
+
+    for (const row of data) {
+        const values = headers.map(header => {
+            const val = row[header] || '';
+            // Escape quotes and wrap in quotes to handle commas inside text
+            return `"${String(val).replace(/"/g, '""')}"`;
+        });
+        csvRows.push(values.join(','));
+    }
+
+    const csvString = csvRows.join('\n');
+    
+    // 3. Create Download Link
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "student_records.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function importFromCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const rows = text.split('\n').filter(row => row.trim() !== '');
+        
+        // Assume first row is header: adm, name, father, class, section, roll, dob
+        const headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const jsonData = [];
+
+        for (let i = 1; i < rows.length; i++) {
+            // Regex to handle commas inside quotes correctly
+            const values = rows[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+            let obj = {};
+            
+            headers.forEach((header, index) => {
+                let val = values[index] ? values[index].trim() : "";
+                obj[header] = val.replace(/^"|"$/g, ''); // Remove surrounding quotes
+            });
+            
+            if (obj.adm) jsonData.push(obj);
+        }
+
+        if (jsonData.length > 0) {
+            localStorage.setItem('admissions', JSON.stringify(jsonData));
+            alert("Data Imported Successfully! Refreshing page...");
+            location.reload(); 
+        }
+    };
+    reader.readAsText(file);
+}
 
 </script>
 
 </body>
 </html>
+
 
 
 
