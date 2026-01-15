@@ -425,11 +425,45 @@ function importFromCSV(event) {
     };
     reader.readAsText(file);
 }
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylhZE18FfCS4od4k7T_tq0XSqUO6jlrrTElNwCHHRML9_h_o_OkrHvS3zHoED64eVbYQ/exec";
+    https://script.google.com/macros/s/AKfycbylhZE18FfCS4od4k7T_tq0XSqUO6jlrrTElNwCHHRML9_h_o_OkrHvS3zHoED64eVbYQ/exec
 
+// 1. Function to send data to Google Sheets
+async function syncToSheets() {
+    let data = JSON.parse(localStorage.getItem('admissions')) || [];
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        console.log("Synced to Cloud");
+    } catch (error) {
+        console.error("Sync failed", error);
+    }
+}
+
+// 2. Function to pull data from Google Sheets on Load
+async function pullFromSheets() {
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const remoteData = await response.json();
+        if(remoteData.length > 0) {
+            localStorage.setItem('admissions', JSON.stringify(remoteData));
+            if(typeof loadRecords === "function") loadRecords();
+        }
+    } catch (error) {
+        console.error("Initial pull failed", error);
+    }
+}
+
+window.onload = () => {
+    syncToSheets();
+};
 </script>
 
 </body>
 </html>
+
 
 
 
